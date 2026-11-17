@@ -1,0 +1,15 @@
+name = "egp-check"
+main = "src/index.js"
+compatibility_date = "2026-11-17"
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+ALLOWED_TARGET_SUFFIXES = ".opengw.net,.vpngate.net"
+CHECK_TIMEOUT_MS = "30000"
+
+[[services]]
+binding = "CHECKER"
+service = "egp-check-private"

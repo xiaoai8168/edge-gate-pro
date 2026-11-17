@@ -1,0 +1,12 @@
+{
+  "name": "edge-gate-pro-deploy-tools",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "dependencies": {
+    "blakejs": "^1.2.1",
+    "playwright-core": "^1.65.1",
+    "tweetnacl": "^1.0.3",
+    "wrangler": "^4.164.0"
+  }
+}

@@ -1,0 +1,18 @@
+# local runtime
+.venv/
+public/
+.env
+.secrets/
+.build/
+scripts/node_modules/
+workers/checker-gate/node_modules/
+node_modules/
+*.tmp
+*.tmp-*
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+wrangler.deploy.toml
+wrangler.edge-gate-*.toml
+.wrangler/
