@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Live data-source diagnostics without touching the published snapshot."""
 from __future__ import annotations
 

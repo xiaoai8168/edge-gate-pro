@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """VPN Gate SSTP 节点检测流水线（模板仓库）。
 
 流程:
