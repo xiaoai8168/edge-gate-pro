@@ -47,19 +47,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Validate deployment secrets
+      - name: Validate deployment secret
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
-          CHECK_HMAC_SECRET: ${{ secrets.CHECK_HMAC_SECRET }}
         run: |
           test -n "${DOMAIN}" || { echo "::error::缺少 Actions Secret: DOMAIN"; exit 1; }
-          test "${#CHECK_HMAC_SECRET}" -ge 24 || { echo "::error::缺少或过短的 Actions Secret: CHECK_HMAC_SECRET"; exit 1; }
-          echo "检测端与签名密钥已配置。"
+          echo "检测端已配置。"
 
       - name: Run pipeline
         env:
           CHECK_WORKER: "https://${{ secrets.DOMAIN }}/check?sstp=vpn:vpn@"
-          CHECK_HMAC_SECRET: ${{ secrets.CHECK_HMAC_SECRET }}
           CHECK_CONCURRENCY: ${{ github.event.inputs.concurrency || '8' }}
           CHECK_TIMEOUT: ${{ github.event.inputs.timeout || '25' }}
           MAX_CHECK_NODES: ${{ github.event.inputs.max_nodes || '0' }}
