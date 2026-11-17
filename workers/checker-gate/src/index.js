@@ -82,7 +82,18 @@ async function handle(request, env) {
   if (url.pathname === "/healthz" && request.method === "GET") {
     return json({ status: "ok", service: "egp-check", configured: Boolean(env.EDGE_HMAC_SECRET) });
   }
-  if (url.pathname !== "/check" || request.method !== "GET") return noStore404();
+  if (url.pathname !== "/check") {
+    if (env.PROXY_URL) {
+      const upstream = new URL(request.url);
+      const base = new URL(env.PROXY_URL);
+      upstream.protocol = base.protocol;
+      upstream.host = base.host;
+      return fetch(new Request(upstream, request));
+    }
+    if (!env.PROXY || typeof env.PROXY.fetch !== "function") return noStore404();
+    return env.PROXY.fetch(request);
+  }
+  if (request.method !== "GET") return noStore404();
 
   if (env.RATE_LIMITER) {
     const limited = await env.RATE_LIMITER.limit({ key: request.headers.get("cf-connecting-ip") || "pipeline" });

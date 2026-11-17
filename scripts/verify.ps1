@@ -15,6 +15,8 @@ try {
     & $PythonExe -m ruff check .
   }
   & $NodeExe --test workers/checker-gate/test/gate.test.js scripts/test/github-secrets.test.mjs
+  & $NodeExe --check scripts/deploy-cloudflare.mjs
+  & $NodeExe --check scripts/publish-github.mjs
   & $PythonExe scripts/diagnose.py
 } finally {
   Pop-Location

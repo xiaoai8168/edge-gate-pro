@@ -25,8 +25,10 @@ def test_schedule_minutes_are_valid():
     assert 0 <= int(minute.removeprefix("*/")) <= 59
 
 
-def test_publish_workflow_requires_signing_secret():
+def test_publish_workflow_uses_direct_checker():
     text = (ROOT / ".github" / "workflows" / "check.yml").read_text(encoding="utf-8")
-    assert "CHECK_HMAC_SECRET" in text
+    assert "DOMAIN" in text
+    assert "CHECK_WORKER" in text
+    assert "CHECK_HMAC_SECRET" not in text
     assert "REQUIRE_EXIT_IP: 'true'" in text
     assert "MIN_SUCCESS_RATIO: '0.30'" in text

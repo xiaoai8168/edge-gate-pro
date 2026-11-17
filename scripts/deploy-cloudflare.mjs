@@ -17,7 +17,7 @@ const require = createRequire(import.meta.url);
 const WRANGLER_ENTRY = require.resolve("wrangler");
 const PINS = {
   checker: { url: "https://github.com/lsh8848/cm-Workers-CheckSocks5.git", commit: "2f31cf9a242444eb22905d888d4d8871b0625b3a" },
-  edgetunnel: { url: "https://github.com/cmliu/edgetunnel.git", commit: "5b2aaf0daf7fa1b126170877f64dd8d2e34c2746" }
+  edgetunnel: { url: "https://github.com/cmliu/edgetunnel.git", commit: "24ee0b6" }
 };
 
 const env = process.env;
@@ -26,10 +26,12 @@ if (!accountId) die("缺少 CLOUDFLARE_ACCOUNT_ID");
 if (!/^[a-f0-9]{32}$/i.test(accountId)) die("CLOUDFLARE_ACCOUNT_ID 格式错误");
 
 const customDomain = boolEnv("USE_CUSTOM_DOMAIN", true);
+const patchRelayMd5 = boolEnv("PATCH_RELAY_MD5", false);
 const zoneName = env.CF_ZONE_NAME || "aiy.kdns.fr";
 const checkHost = env.CHECK_HOST || "egp-check.aiy.kdns.fr";
-const proxyHost = env.PROXY_HOST || "egp-gate.aiy.kdns.fr";
 const dashboardHost = env.DASHBOARD_HOST || "egp-edge.aiy.kdns.fr";
+const proxyWorkerName = env.PROXY_WORKER || "egp-relay";
+const kvNamespaceName = env.KV_NAMESPACE || "egp-relay-kv";
 
 fs.mkdirSync(BUILD, { recursive: true });
 fs.mkdirSync(SECRETS_DIR, { recursive: true });
@@ -87,6 +89,24 @@ function ensureRepo(name) {
   console.log("[external] " + name + " pinned at " + spec.commit.slice(0, 12));
   return dir;
 }
+function patchEdgetunnelMd5(edgeDir) {
+  const workerPath = path.join(edgeDir, "_worker.js");
+  let worker = fs.readFileSync(workerPath, "utf8");
+  if (worker.includes("function md5Bytes")) return;
+  const md5Fn = fs.readFileSync(path.join(ROOT, "scripts", "assets", "md5-bytes.js"), "utf8").trim() + "\n\n";
+  const start = worker.indexOf("async function MD5MD5");
+  const end = worker.indexOf("\n}", start);
+  if (start < 0 || end < 0) throw new Error("edgetunnel MD5MD5 not found");
+  const replacement = `async function MD5MD5(文本) {
+	const 编码器 = new TextEncoder();
+	const 第一次十六进制 = Array.from(md5Bytes(编码器.encode(文本))).map(字节 => 字节.toString(16).padStart(2, "0")).join("");
+	const 第二次十六进制 = Array.from(md5Bytes(编码器.encode(第一次十六进制.slice(7, 27)))).map(字节 => 字节.toString(16).padStart(2, "0")).join("");
+	return 第二次十六进制.toLowerCase();
+}`;
+  worker = worker.slice(0, start) + md5Fn + replacement + worker.slice(end + 2);
+  fs.writeFileSync(workerPath, worker, "utf8");
+}
+
 function deploymentExists(workerName) {
   const result = wrangler(["deployments", "status", "--name", workerName], { allowFail: true });
   return result.status === 0;
@@ -126,6 +146,7 @@ try {
     'main = "_worker.js"',
     'compatibility_date = "2026-11-17"',
     'workers_dev = false',
+    'preview_urls = false',
     '',
     '[observability]',
     'enabled = true',
@@ -144,6 +165,7 @@ try {
     'main = "src/index.js"',
     'compatibility_date = "2026-11-17"',
     'workers_dev = true',
+    'preview_urls = false',
     workerRoutes(checkHost),
     '[observability]',
     'enabled = true',
@@ -155,25 +177,31 @@ try {
     '[[services]]',
     'binding = "CHECKER"',
     'service = "egp-check-private"',
+    '',
+    '[[services]]',
+    'binding = "PROXY"',
+    'service = "' + proxyWorkerName + '"',
     ''
   ].join("\n"), "utf8");
-  wrangler(["secret", "put", "EDGE_HMAC_SECRET", "--config", gateConfig], { input: state.hmacSecret + "\n" });
+  wrangler(["secret", "put", "EDGE_HMAC_SECRET", "--config", gateConfig], { input: state.hmacSecret });
   console.log("[deploy] signed checker gate");
   const checkerPublicHost = deployWorker(gateConfig, "egp-check", checkHost);
 
   const edgeDir = ensureRepo("edgetunnel");
+  if (patchRelayMd5) patchEdgetunnelMd5(edgeDir);
   let kvNamespaceId = String(state.kvNamespaceId || "").trim();
   if (!kvNamespaceId) {
     console.log("[deploy] creating KV namespace");
     const kvConfig = path.join(edgeDir, "wrangler.toml");
     fs.writeFileSync(kvConfig, [
-      'name = "egp-proxy"',
+      'name = "' + proxyWorkerName + '"',
       'main = "_worker.js"',
-      'compatibility_date = "2026-11-17"',
+      'compatibility_date = "2026-09-07"',
       'workers_dev = true',
+      'preview_urls = false',
       ''
     ].join("\n"), "utf8");
-    const created = wrangler(["kv", "namespace", "create", "egp-proxy-kv", "--config", kvConfig]);
+    const created = wrangler(["kv", "namespace", "create", kvNamespaceName, "--config", kvConfig]);
     console.log(created.output.trim());
     const id = created.output.match(/[a-f0-9]{32}/i);
     if (!id) throw new Error("无法从 Wrangler 输出解析 KV namespace id");
@@ -182,12 +210,13 @@ try {
 
   const proxyConfig = path.join(edgeDir, "wrangler.toml");
   fs.writeFileSync(proxyConfig, [
-    'name = "egp-proxy"',
+    'name = "' + proxyWorkerName + '"',
     'main = "_worker.js"',
-    'compatibility_date = "2026-11-17"',
+    'compatibility_date = "2026-09-07"',
     'keep_vars = true',
     'workers_dev = true',
-    workerRoutes(proxyHost),
+    'preview_urls = false',
+    '',
     '[observability]',
     'enabled = true',
     '',
@@ -202,15 +231,16 @@ try {
     'id = "' + kvNamespaceId + '"',
     ''
   ].join("\n"), "utf8");
-  wrangler(["secret", "put", "ADMIN", "--config", proxyConfig], { input: state.adminPassword + "\n" });
-  wrangler(["secret", "put", "UUID", "--config", proxyConfig], { input: state.uuid + "\n" });
-  console.log("[deploy] independent proxy service");
-  const proxyPublicHost = deployWorker(proxyConfig, "egp-proxy", proxyHost);
+  wrangler(["secret", "put", "ADMIN", "--config", proxyConfig], { input: state.adminPassword });
+  wrangler(["secret", "put", "UUID", "--config", proxyConfig], { input: state.uuid });
+  console.log("[deploy] independent relay service");
+  deployWorker(proxyConfig, proxyWorkerName);
 
   state.accountId = accountId;
   state.zoneName = zoneName;
   state.checkerHost = checkerPublicHost;
-  state.proxyHost = proxyPublicHost;
+  state.proxyHost = checkerPublicHost;
+  state.proxyBackend = proxyWorkerName;
   state.dashboardHost = dashboardHost;
   state.kvNamespaceId = kvNamespaceId;
   state.deployedAt = new Date().toISOString();
@@ -220,7 +250,7 @@ try {
     ok: true,
     checkerHost: checkerPublicHost,
     checkerHealth: "https://" + checkerPublicHost + "/healthz",
-    proxyAdmin: "https://" + proxyPublicHost + "/admin",
+    proxyAdmin: "https://" + checkerPublicHost + "/admin",
     dashboardHost,
     credentialsFile: STATE_PATH,
     next: "运行 scripts/publish-github.mjs 发布核心仓库和 GitHub Secrets"

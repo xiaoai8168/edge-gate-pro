@@ -1,6 +1,5 @@
 param(
-  [string]$CheckerHost = "egp-check.aiy.kdns.fr",
-  [string]$ProxyHost = "egp-gate.aiy.kdns.fr"
+  [string]$CheckerHost = "egp-check.aiy.kdns.fr"
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,5 +14,6 @@ function Test-Url([string]$Url) {
 
 @(
   Test-Url "https://$CheckerHost/healthz"
-  Test-Url "https://$ProxyHost/admin"
+  Test-Url "https://$CheckerHost/admin"
+  Test-Url "https://$CheckerHost/login"
 ) | Format-Table -AutoSize -Wrap

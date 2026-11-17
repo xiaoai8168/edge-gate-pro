@@ -11,5 +11,5 @@ Pinned revisions:
 
 ```text
 CheckSocks5  2f31cf9a242444eb22905d888d4d8871b0625b3a
-edgetunnel   5b2aaf0daf7fa1b126170877f64dd8d2e34c2746
+edgetunnel   24ee0b6 (lightweight stable; MD5 compatibility patch applied at deploy time)
 ```

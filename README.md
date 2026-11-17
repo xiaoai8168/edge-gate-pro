@@ -23,7 +23,7 @@ VPN Gate API（HTTPS 优先、多源回退）
 | --- | --- |
 | 仪表盘 | GitHub Pages（可后续绑定 `egp-edge.aiy.kdns.fr`） |
 | 检测前置 | `egp-check.aiy.kdns.fr` |
-| 代理与后台 | `egp-gate.aiy.kdns.fr` |
+| 代理后台 | `egp-check.aiy.kdns.fr/admin` |
 
 ## 核心能力
 
@@ -35,6 +35,10 @@ VPN Gate API（HTTPS 优先、多源回退）
 - 限制同一出口 IP、同一 ASN、同一国家的发布数量，减少“始终几个旧 IP”的问题；
 - 成功率低于 30% 或较上一版断崖下降时停止发布，保留上一版；
 - 原子写入、真实数据源内测、Python 与 Worker 单元测试、GitHub Actions CI。
+
+## 手动部署
+
+完整步骤见 `docs/MANUAL_DEPLOY.md`。
 
 ## 一键上线
 
@@ -58,7 +62,7 @@ powershell -ExecutionPolicy Bypass -File scripts\go-live.ps1
 默认创建：
 
 - GitHub：`xiaoai8168/edge-gate-pro`（公开）；
-- Cloudflare Worker：`egp-check-private`、`egp-check`、`egp-proxy`。
+- Cloudflare Worker：`egp-check-private`、`egp-check`、`egp-relay`。
 
 运行凭据只写入本机 `.secrets/deployment.json`，该目录已被 Git 忽略。
 

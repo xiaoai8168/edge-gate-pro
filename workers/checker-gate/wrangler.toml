@@ -13,3 +13,7 @@ CHECK_TIMEOUT_MS = "30000"
 [[services]]
 binding = "CHECKER"
 service = "egp-check-private"
+
+[[services]]
+binding = "PROXY"
+service = "egp-relay"
