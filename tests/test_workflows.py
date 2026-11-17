@@ -21,7 +21,7 @@ def test_schedule_minutes_are_valid():
     triggers = workflow.get("on", workflow.get(True))
     cron = triggers["schedule"][0]["cron"]
     minute = cron.split()[0]
-    assert minute == "*/30"
+    assert minute == "0"
     assert 0 <= int(minute.removeprefix("*/")) <= 59
 
 
