@@ -36,5 +36,8 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install Node dependencies
+        run: npm ci --prefix scripts
+
       - name: Node tests
         run: node --test workers/checker-gate/test/gate.test.js scripts/test/github-secrets.test.mjs
