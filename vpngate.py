@@ -60,8 +60,9 @@ DEFAULT_VPNGATE_API = (
 DEFAULT_VPNGATE_MIRROR = (
     "https://raw.githubusercontent.com/fdciabdul/Vpngate-Scraper-API/main/json/data.json"
 )
-DEFAULT_OPTIMAL_API = "https://raw.githubusercontent.com/gib888/IP-database/refs/heads/main/iphzong.txt"
-
+DEFAULT_OPTIMAL_API = (
+    "https://raw.githubusercontent.com/gib888/IP-database/refs/heads/main/iphzong.txt"
+)                       
 # 占位符检测：命中任意一个就认为用户还没配置
 PLACEHOLDER_MARKERS = ("你的", "YOUR_", "YOUR-", "example.com", "yourdomain")
 
