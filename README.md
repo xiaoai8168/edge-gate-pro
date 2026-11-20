@@ -27,13 +27,14 @@ VPN Gate API（HTTPS 优先、多源回退）
 
 ## 核心能力
 
-- 每 30 分钟自动检测，手动触发可覆盖检测数量、并发和超时；
+- 每小时第 17 分钟自动检测（UTC，避开整点高负载）；GitHub 仍可能延迟或丢弃计划任务，手动触发可覆盖检测数量、并发和超时；
 - HTTPS 优先并可自动回退多个 VPN Gate 镜像；
-- 检测请求使用 HMAC-SHA256、时间窗和固定目标域名白名单；
+- 检测请求默认直连前置 Check Worker，同时保留 HMAC 兼容能力；
 - 私有检测 Worker 不开放 `workers.dev`，只允许前置 Worker 通过 Service Binding 调用；
 - 必须返回真实出口 IP 才计为可用，避免把“TCP 可连接”误判成可用节点；
 - 限制同一出口 IP、同一 ASN、同一国家的发布数量，减少“始终几个旧 IP”的问题；
-- 成功率低于 30% 或较上一版断崖下降时停止发布，保留上一版；
+- 成功率默认低于 30% 或较上一版断崖下降时停止发布，保留上一版；可通过仓库 Variables 调整 `MIN_SUCCESS_RATIO` / `MIN_PREVIOUS_RATIO`；
+- Pages artifact 可见性轮询，避免部署动作抢先读取导致“找不到 artifact”；
 - 原子写入、真实数据源内测、Python 与 Worker 单元测试、GitHub Actions CI。
 
 ## 手动部署

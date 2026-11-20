@@ -21,7 +21,7 @@ def test_schedule_minutes_are_valid():
     triggers = workflow.get("on", workflow.get(True))
     cron = triggers["schedule"][0]["cron"]
     minute = cron.split()[0]
-    assert minute == "0"
+    assert minute not in {"0", "30"}, "avoid GitHub Actions peak-hour scheduling"
     assert 0 <= int(minute.removeprefix("*/")) <= 59
 
 
@@ -31,4 +31,7 @@ def test_publish_workflow_uses_direct_checker():
     assert "CHECK_WORKER" in text
     assert "CHECK_HMAC_SECRET" not in text
     assert "REQUIRE_EXIT_IP: 'true'" in text
-    assert "MIN_SUCCESS_RATIO: '0.30'" in text
+    assert "MIN_SUCCESS_RATIO: ${{ vars.MIN_SUCCESS_RATIO || '0.30' }}" in text
+    assert "MIN_PREVIOUS_RATIO: ${{ vars.MIN_PREVIOUS_RATIO || '0.35' }}" in text
+    assert "actions: read" in text
+    assert "artifacts?name=github-pages" in text

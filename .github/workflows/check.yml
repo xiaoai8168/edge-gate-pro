@@ -2,7 +2,7 @@ name: Edge Gate Pro Node Check
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       max_nodes:
@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -60,8 +61,8 @@ jobs:
           CHECK_CONCURRENCY: ${{ github.event.inputs.concurrency || '8' }}
           CHECK_TIMEOUT: ${{ github.event.inputs.timeout || '25' }}
           MAX_CHECK_NODES: ${{ github.event.inputs.max_nodes || '0' }}
-          MIN_SUCCESS_RATIO: '0.30'
-          MIN_PREVIOUS_RATIO: '0.35'
+          MIN_SUCCESS_RATIO: ${{ vars.MIN_SUCCESS_RATIO || '0.30' }}
+          MIN_PREVIOUS_RATIO: ${{ vars.MIN_PREVIOUS_RATIO || '0.35' }}
           REQUIRE_EXIT_IP: 'true'
           MAX_PER_EXIT_IP: '1'
           MAX_PER_ASN_PER_COUNTRY: '6'
@@ -105,7 +106,30 @@ jobs:
           path: public
 
       - name: Wait for Pages artifact
-        run: sleep 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?name=github-pages"
+          for attempt in $(seq 1 30); do
+            status=$(curl -sS -o /tmp/artifacts.json -w '%{http_code}' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${api}")
+            if [ "${status}" = "200" ]; then
+              total=$(python3 -c 'import json; print(json.load(open("/tmp/artifacts.json", encoding="utf-8")).get("total_count", 0))')
+              if [ "${total}" -gt 0 ]; then
+                echo "Pages artifact is ready (attempt ${attempt}/30)."
+                exit 0
+              fi
+            fi
+            echo "Pages artifact not ready yet (attempt ${attempt}/30, HTTP ${status})."
+            sleep 2
+          done
+          echo "::error::Pages artifact did not become visible within 60 seconds."
+          cat /tmp/artifacts.json 2>/dev/null || true
+          exit 1
 
       - name: Deploy to GitHub Pages
         id: deployment
